@@ -1,0 +1,172 @@
+version: "2"
+services:
+  redis:
+    container_name: buddy_session_store
+    image: buddy/redis:${BUDDY_DOCKER_TAG}
+    volumes:
+      - ${BUDDY_REDIS_PATH}:/data
+    expose:
+      - "6379"
+    env_file: ${BUDDY_ENV_PATH}
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
+    ${HOSTS}
+  front:
+    container_name: buddy_front
+    image: buddy/front:${BUDDY_DOCKER_TAG}
+    depends_on:
+      - "redis"
+    volumes:
+      - ${BUDDY_SERVED_PATH}:/served
+      - ${BUDDY_BUDDY_PATH}:/.buddy
+    expose:
+      - "9000"
+      - "9001"
+      - "22"
+    ports:
+      - "${BUDDY_FRONT_SSH_PORT}:22"
+    env_file: ${BUDDY_ENV_PATH}
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
+    ${HOSTS}
+  mongo:
+    container_name: buddy_nosql_db
+    image: buddy/mongo:${BUDDY_DOCKER_TAG}
+    volumes:
+      - ${BUDDY_MONGO_PATH}:/data/db
+    expose:
+      - "27017"
+    env_file: ${BUDDY_ENV_PATH}
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
+    ${HOSTS}
+  mysql:
+    container_name: buddy_sql_db
+    image: buddy/mysql:${BUDDY_DOCKER_TAG}
+    volumes:
+      - ${BUDDY_MYSQL_PATH}:/var/lib/mysql
+    expose:
+      - "3306"
+    env_file: ${BUDDY_ENV_PATH}
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
+    ${HOSTS}
+  git-server:
+    container_name: buddy_git_server
+    image: buddy/git-server:${BUDDY_DOCKER_TAG}
+    depends_on:
+      - "mongo"
+      - "mysql"
+    expose:
+      - "9292"
+      - "2244"
+      - "9497"
+    env_file: ${BUDDY_ENV_PATH}
+    volumes:
+      - ${BUDDY_BACKEND_PATH}:/var/data/backend-v4
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
+    ${HOSTS}
+  application-server:
+    container_name: buddy_application_server
+    image: buddy/application-server:${BUDDY_DOCKER_TAG}
+    depends_on:
+      - "build-server"
+      - "git-server"
+    expose:
+      - "9393"
+      - "9010"
+      - "9090"
+    env_file: ${BUDDY_ENV_PATH}
+    volumes:
+      - ${BUDDY_BACKEND_PATH}:/var/data/backend-v4
+      - ${BUDDY_UPDATER_PATH}:/updater
+      - ${BUDDY_BUDDY_PATH}:/buddy
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
+    ${HOSTS}
+  build-server:
+    container_name: buddy_build_server
+    image: buddy/build-server:${BUDDY_DOCKER_TAG}
+    expose:
+      - "1090"
+    env_file: ${BUDDY_ENV_PATH}
+    volumes:
+      - ${BUDDY_BACKEND_PATH}:/var/data/backend-v4
+      - /var/run/docker.sock:/var/run/docker.sock
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
+    ${HOSTS}
+  haproxy:
+    container_name: buddy_proxy_server
+    image: buddy/haproxy:${BUDDY_DOCKER_TAG}
+    volumes:
+      - ${BUDDY_BUDDY_PATH}:/usr/local/etc/haproxy/certs
+#    ports:
+#      - "${BUDDY_BIND_IP_HTTPS_PORT}:443"
+#      - "${BUDDY_BIND_IP_HTTP_PORT}:80"
+#      - "${BUDDY_BIND_IP_SSH_PORT}:22"
+    depends_on:
+      - "front"
+      - "application-server"
+    env_file: ${BUDDY_ENV_PATH}
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
+    ${HOSTS}
+  updater:
+    container_name: buddy_updater
+    image: buddy/updater:${BUDDY_DOCKER_TAG}
+    volumes:
+      - ${BUDDY_UPDATER_PATH}:/updater
+      - ${BUDDY_BUDDY_PATH}:/buddy
+      - ${BUDDY_BACKEND_PATH}:/var/data/backend-v4
+    depends_on:
+      - "mongo"
+      - "mysql"
+    env_file: ${BUDDY_ENV_PATH}
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
+    ${HOSTS}
+  utility:
+    container_name: buddy_utility
+    image: buddy/utility:${BUDDY_DOCKER_TAG}
+    volumes:
+      - ${BUDDY_BUDDY_PATH}:/.buddy
+      - /var/run/docker.sock:/var/run/docker.sock
+    env_file: ${BUDDY_ENV_PATH}
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
+    ${HOSTS}
+  utility-update:
+    container_name: buddy_utility_update
+    image: buddy/utility-update:${BUDDY_DOCKER_TAG}
+    volumes:
+      - ${BUDDY_BUDDY_PATH}:/.buddy
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${BUDDY_USER_PATH}:/app
+    env_file: ${BUDDY_ENV_PATH}
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
+    ${HOSTS}

@@ -1,0 +1,28 @@
+InsecureSkipVerify = true
+
+defaultEntryPoints = ["https"]
+[entryPoints]
+  [entryPoints.https]
+  address = ":443"
+    [entryPoints.https.tls]
+
+[acme]
+email = "user@example.com"
+storage = "/acme/acme.json"
+entryPoint = "https"
+
+[file]
+
+[frontends]
+  [frontends.buddy]
+    backend = "buddy"
+    passHostHeader = true
+    [frontends.buddy.routes.host]
+      rule = "Host: buddy.example.com"
+
+[backends]
+  [backends.buddy]
+    [backends.buddy.LoadBalancer]
+      method = "wrr"
+    [backends.buddy.servers.local]
+      url = "https://haproxy"

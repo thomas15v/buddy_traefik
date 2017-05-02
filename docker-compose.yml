@@ -1,0 +1,23 @@
+version: '2'
+
+services:
+  proxy:
+    image: traefik
+    command: --web -c /etc/traefik/traefik.toml --LOGLEVEL=debug
+    restart: always
+    #network_mode: "host"
+    ports:
+      - "443:443"
+    external_links:
+    - 'buddy_haproxy'
+    networks:
+    - default
+    - buddy_default
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik.toml:/etc/traefik/traefik.toml
+      - ./acme.json:/acme/acme.json
+
+networks:
+  buddy_default:
+    external: true
